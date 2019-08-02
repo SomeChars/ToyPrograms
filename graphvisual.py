@@ -1,30 +1,97 @@
 import matplotlib.pyplot as plt
 import numpy as np
+import random
 
 
 def get_graph():
-    print("Enter vertex names, split them with spaces:")
+    print('Enter vertex names, split them with spaces; type "Random vertex_number edge_density_level(1-4) + args"'
+          ' for a random graph(mpre info in comments below this line)')
+    #Random vertex_number edge_density_level(1-4) is_weighted is_directed; set "random" for a random result
     vertex_names = input().split()
-    for i in vertex_names:
-        if vertex_names.count(i) > 1:
-            print('You are very bad person')
-            return 'GO TO HELL'
-    vertex_number = len(vertex_names)
+    if len(vertex_names) == 0:
+        return 'Empty input'
+    if vertex_names[0] == 'Random':
+        vertex_names, vertex_number, is_weighted, is_directed, adj_list = make_random_graph(vertex_names)
+    else:
+        for i in vertex_names:
+            if vertex_names.count(i) > 1:
+                print('You are very bad person')
+                return 'GO TO HELL'
+        vertex_number = len(vertex_names)
 
-    print("Is graph directed?(y/n)")
-    is_directed = False
-    directed = input()
-    if directed == 'y' or directed == 'yes':
-        is_directed = True
+        print('Is graph directed?(y/n)')
+        is_directed = False
+        directed = input()
+        if directed == 'y' or directed == 'yes':
+            is_directed = True
 
-    print("Enter edges like this: vertex1,vertex2,distance_between; if not weighted: vertex1,vertex2")
-    adj_list = input().split()
+        print('Enter edges like this: vertex1,vertex2,distance_between; if not weighted: vertex1,vertex2')
+        adj_list = input().split()
 
-    is_weighted = True
-    weight_control = adj_list[0].split(',')
-    if len(weight_control) == 2:
-        is_weighted = False
+        is_weighted = True
+        weight_control = adj_list[0].split(',')
+        if len(weight_control) == 2:
+            is_weighted = False
     return vertex_names,adj_list,is_weighted,is_directed
+
+def make_random_graph(args):
+    vertex_names = ''
+    adj_list = []
+    vertex_number = random.randint(1, 16)
+    if len(args) > 1 and args[1] != 'random':
+            vertex_number = int(args[1])
+    vertex_names = ['vertex'+str(j+1) for j in range(vertex_number)]
+
+    is_directed = random.choice([True,False])
+    is_weighted = random.choice([True,False])
+
+    if len(args) > 3 and args[3] != 'random':
+        is_weighted = False if args[3] == 'False' else True
+    if len(args) > 4 and args[4] != 'random':
+        is_directed = False if args[4] == 'False' else True
+
+    if len(args) > 2:
+        if args[2] == 'random':
+            edge_density = random.randint(1,4)
+        else:
+            edge_density = args[2]
+
+    if not is_directed:
+        edges_pool = []
+        if len(args) < 2:
+            edges_number = random.randint(1,(vertex_number - 2)*(vertex_number - 1)/2)
+        else:
+            edges_number = random.randint(int((int(edge_density) - 1)*((vertex_number) * (vertex_number + 1) / 2)/4),
+                                          int(int(edge_density)*((vertex_number) * (vertex_number + 1) / 2)/4))
+        for i in range(vertex_number):
+            for j in range(i + 1,vertex_number):
+                edge = 'vertex'+str(i+1)+',vertex'+str(j+1)
+                if is_weighted:
+                    edge += ','+str(random.randint(1,10))
+                edges_pool+=[edge]
+        for k in range(edges_number):
+            number = random.randint(0,len(edges_pool) - 1)
+            adj_list += [edges_pool.pop(number)]
+    else:
+        edges_pool = []
+        if len(args) < 2:
+            edges_number = random.randint(1, (vertex_number - 2) * (vertex_number - 1) / 2)
+        else:
+            edges_number = random.randint(int((int(edge_density) - 1) * ((vertex_number + 1) * (vertex_number - 1)) / 4),
+                                          int(int(edge_density) * ((vertex_number + 1) * (vertex_number)) / 4))
+        for i in range(vertex_number):
+            for j in range(vertex_number):
+                if i != j:
+                    edge = 'vertex' + str(i + 1) + ',vertex' + str(j + 1)
+                    if is_weighted:
+                        edge += ',' + str(random.randint(1, 10))
+                    edges_pool += [edge]
+        for k in range(edges_number):
+            number = random.randint(0, len(edges_pool) - 1)
+            adj_list += [edges_pool.pop(number)]
+
+    return vertex_names,vertex_number,is_weighted,is_directed,adj_list
+
 
 
 def list_to_matrix(vertex_names,adj_list,is_directed):
@@ -89,7 +156,7 @@ def show_graph(vertex_names,adj_list,is_directed,*args):
             plt.text((x1 + x2)/2,(y1 + y2)/2,edge[2],color='red')
 
     if len(args)!=0:
-        plt.title('From '+highlighted_edges[0][0]+' to '+highlighted_edges[len(highlighted_edges)-1][2])
+        plt.title('From '+highlighted_edges[0].split(',')[0]+' to '+highlighted_edges[len(highlighted_edges)-1].split(',')[1])
 
     plt.show()
 
@@ -105,6 +172,7 @@ def DFS(vertex_names,adj_matrix):
         if not visited[vertex_names.index(j)]:
             start_vertex,vertex_names,adj_matrix,visited,previsit,postvisit,counter = \
                 explore(j,vertex_names,adj_matrix,visited,previsit,postvisit,counter)
+            counter += 1
 
     return previsit,postvisit
 
@@ -125,7 +193,7 @@ def explore(start_vertex,vertex_names,adj_matrix,*args):
     visited[vertex_names.index(safe_start_vertex)] = True
 
     for i in vertex_names:
-        if not visited[vertex_names.index(i)] and adj_matrix[vertex_names.index(safe_start_vertex)][vertex_names.index(i)]:
+        if not visited[vertex_names.index(i)] and adj_matrix[vertex_names.index(safe_start_vertex)][vertex_names.index(i)] != float('inf'):
             counter+=1
             start_vertex,vertex_names,adj_matrix,visited,previsit,postvisit,counter = \
                 explore(i,vertex_names,adj_matrix,visited,previsit,postvisit,counter)
@@ -156,16 +224,22 @@ def BFA(start_vertex,vertex_names,adj_list):
     for n in range(len(vertex_names)-1):
         for e in adj_list:
             edge = e.split(',')
-            if distances[vertex_names.index(edge[1])] > distances[vertex_names.index(edge[0])] + int(edge[2]):
-                distances[vertex_names.index(edge[1])] = distances[vertex_names.index(edge[0])] + int(edge[2])
+            edge_len = 1
+            if len(edge) > 2:
+                edge_len = int(edge[2])
+            if distances[vertex_names.index(edge[1])] > distances[vertex_names.index(edge[0])] + edge_len:
+                distances[vertex_names.index(edge[1])] = distances[vertex_names.index(edge[0])] + edge_len
                 prev[vertex_names.index(edge[1])] = edge[0]
 
     #check for negative cycles
     spec_distances = distances.copy()
     for e in adj_list:
         edge = e.split(',')
-        if spec_distances[vertex_names.index(edge[1])] > spec_distances[vertex_names.index(edge[0])] + int(edge[2]):
-            spec_distances[vertex_names.index(edge[1])] = spec_distances[vertex_names.index(edge[0])] + int(edge[2])
+        edge_len = 1
+        if len(edge) > 2:
+            edge_len = int(edge[2])
+        if spec_distances[vertex_names.index(edge[1])] > spec_distances[vertex_names.index(edge[0])] + edge_len:
+            spec_distances[vertex_names.index(edge[1])] = spec_distances[vertex_names.index(edge[0])] + edge_len
 
     if spec_distances!=distances:
         print('Negative cycle found')
@@ -178,7 +252,7 @@ def BFA(start_vertex,vertex_names,adj_list):
 def SSP(start_vertex,finish_vertex,vertex_names,adj_list,adj_matrix,is_weighted,is_directed):
     args = explore(start_vertex,vertex_names,adj_matrix)
     if not args[3][vertex_names.index(finish_vertex)]:
-        print("Couldn't reach ",finish_vertex)
+        print("Can't reach ",finish_vertex)
         return
     distances,prev = BFA(start_vertex,vertex_names,adj_list)
     da_way_rev = []
@@ -200,7 +274,7 @@ def SSP(start_vertex,finish_vertex,vertex_names,adj_list,adj_matrix,is_weighted,
     return distances[vertex_names.index(finish_vertex)],da_way
 
 
-#bad code, sry(all code in this program is bad)
+
 def vertex_cover_edges(vertex_names,adj_list,adj_matrix,is_directed):
     matrix_to_mod = adj_matrix.copy()
     chosen_vertex = []
@@ -266,9 +340,8 @@ def MIVS(vertex_names,adj_matrix):
         chosen_vertex += [vertex]
         for j in range(len(vertex_names)):
             if matrix_to_mod[vertex_names.index(vertex)][j]!=float('inf') and matrix_to_mod[vertex_names.index(vertex)][j]!=0:
-                for p in range(len(vertex_names)):
-                    matrix_to_mod[p][j] = float('inf')
-                    matrix_to_mod[j][p] = float('inf')
+                matrix_to_mod[j] = [float('inf') for q in range(len(vertex_names))]
+                matrix_to_mod[:,j] = [float('inf') for q in range(len(vertex_names))]
                 vertex_pool.remove(vertex_names[j])
 
         vertex_pool.remove(vertex)
@@ -296,17 +369,23 @@ for k in range(len(vertex_names)):
 print('All distances:')
 print(FWA(vertex_names,adj_matrix))
 
-print('All distances from vertex:')
-print(BFA('a',vertex_names,adj_list))
+vertex1 = random.choice(vertex_names)
+vertex2 = random.choice(vertex_names)
+while vertex2 == vertex1:
+    vertex2 = random.choice(vertex_names)
 
-print('Da way from vertex1 to vertex2:')
-print(SSP('a','e',vertex_names,adj_list,adj_matrix,is_weighted,is_directed))
+print('All distances from '+vertex1+':')
+print(BFA(vertex1,vertex_names,adj_list))
+
+print('Da way from '+vertex1+' to '+vertex2+':')
+print(SSP(vertex1,vertex2,vertex_names,adj_list,adj_matrix,is_weighted,is_directed))
 
 print('Vertex cover edges:')
 print(vertex_cover_edges(vertex_names,adj_list,adj_matrix,is_directed))
 
-print('Max independent vertex set:')
-print(MIVS(vertex_names,adj_matrix))
+if not is_directed:
+    print('Max independent vertex set:')
+    print(MIVS(vertex_names,adj_matrix))
 
 show_graph(vertex_names,adj_list,is_directed)
 
@@ -314,7 +393,8 @@ show_graph(vertex_names,adj_list,is_directed)
 #a b c d e f
 #n
 #a,b,2 a,c,5 b,f,1 f,e,2 c,e,1
+#Or just Random :)
 
 
 
-
+#some problems could happen
