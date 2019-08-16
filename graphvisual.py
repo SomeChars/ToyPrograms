@@ -1,6 +1,7 @@
 import matplotlib.pyplot as plt
 import numpy as np
 import random
+from itertools import permutations
 
 
 def get_graph():
@@ -118,16 +119,83 @@ def list_to_matrix(vertex_names,adj_list,is_directed):
     return adj_matrix
 
 
+
+def matrix_to_list(vertex_names,adj_matrix,is_weighted,is_directed):
+    temp_adj_list = []
+    for i in range(len(vertex_names)):
+        for j in range(len(vertex_names)):
+            if adj_matrix[i][j] != float('inf') and adj_matrix[i][j] != 0:
+                edge = vertex_names[i]+','+vertex_names[j]
+                if is_weighted:
+                    edge += ','+str(int(adj_matrix[i][j]))
+                if not edge in temp_adj_list:
+                    if is_directed:
+                        temp_adj_list += [edge]
+                    else:
+                        if is_weighted  and str(edge.split(',')[1]+','+edge.split(',')[0]+','+edge.split(',')[2]) not in temp_adj_list:
+                            temp_adj_list += [edge]
+                        if not is_weighted and str(edge.split(',')[1] + ',' + edge.split(',')[0]) not in temp_adj_list:
+                            temp_adj_list += [edge]
+    return temp_adj_list
+
+
+def weight_check(vertex_names,adj_matrix):
+    is_weighted = False
+    for i in range(len(vertex_names)):
+        for j in range(len(vertex_names)):
+            if adj_matrix[i][j]!=float('inf') and adj_matrix[i][j]!=0 and adj_matrix[i][j]!=1:
+                is_weighted = True
+    return is_weighted
+
+
+
+def make_chain(vertex_set,vertex_names,adj_matrix,need_to_close):
+    chain = []
+    is_weighted = weight_check(vertex_names,adj_matrix)
+    for i in range(len(vertex_set) - 1):
+        current_edge = vertex_set[i] + ',' + vertex_set[i + 1]
+        if is_weighted:
+            current_edge += ',' + str(int(adj_matrix[vertex_names.index(vertex_set[i])][vertex_names.index(vertex_set[i + 1])]))
+        chain += [current_edge]
+    if need_to_close:
+        if not is_weighted:
+            chain += [vertex_set[len(vertex_set)-1]+','+vertex_set[0]]
+        else:
+            chain += [vertex_set[len(vertex_set)-1]+','+vertex_set[0]+','+
+                      str(int(adj_matrix[vertex_names.index(vertex_set[len(vertex_set)-1])][vertex_names.index(vertex_set[0])]))]
+    return chain
+
+
 def show_graph(vertex_names,adj_list,is_directed,*args):
     #0 pos in args - edges wanted to be highlighted; input like this: ['a,b,2','b,c,5'] - if graph weighted input weights
-    if len(args) > 0:
+    #1 pos to color edges
+    if len(args) > 0 and args[0] != None:
         highlighted_edges = args[0]
+    if len(args) > 1:
+        colored_vertexes = args[1]
+        color_pool = []
+        for i in range(len(colored_vertexes)):
+            color_pool += [(random.random(),random.random(),random.random())]
+        dict_colored = {}
+        for i in colored_vertexes:
+            c = random.choice(color_pool)
+            dict_colored[i] = c
+            color_pool.remove(c)
+
     vertex_number = len(vertex_names)
     coordinates = np.array([[np.cos(2*t*np.pi/vertex_number),np.sin(2*t*np.pi/vertex_number)] for t in range(vertex_number)])
     for i in vertex_names:
         x = coordinates[vertex_names.index(i)][0]
         y = coordinates[vertex_names.index(i)][1]
-        plt.scatter(x,y,color='red')
+        if len(args) <= 1:
+            plt.scatter(x,y,color='red')
+        if len(args) > 1 and args[1] != None:
+            for j in colored_vertexes:
+                if i in colored_vertexes[j]:
+                    color_num = j
+                    break
+            current_color = dict_colored[color_num]
+            plt.scatter(x, y, color=current_color)
         plt.text(x,y,i,fontsize='15',color='blue')
 
     for j in adj_list:
@@ -137,17 +205,23 @@ def show_graph(vertex_names,adj_list,is_directed,*args):
         x2 = coordinates[vertex_names.index(edge[1])][0]
         y2 = coordinates[vertex_names.index(edge[1])][1]
         if not is_directed:
-            if len(args) == 0:
+            if len(args) == 0 or (len(args)>0 and args[0] == None):
                 plt.plot([x1,x2],[y1,y2],color='black')
-            else:
-                if j in highlighted_edges:
-                    plt.plot([x1, x2], [y1, y2], color='green')
+            elif args[0] != None:
+                if is_weighted:
+                    if j in highlighted_edges or str(edge[1]+','+edge[0]+','+edge[2]) in highlighted_edges:
+                        plt.plot([x1, x2], [y1, y2], color='green')
+                    else:
+                        plt.plot([x1, x2], [y1, y2], color='black')
                 else:
-                    plt.plot([x1, x2], [y1, y2], color='black')
+                    if j in highlighted_edges or str(edge[1]+','+edge[0]) in highlighted_edges:
+                        plt.plot([x1, x2], [y1, y2], color='green')
+                    else:
+                        plt.plot([x1, x2], [y1, y2], color='black')
         else:
-            if len(args) == 0:
+            if len(args) == 0 or (len(args)>0 and args[0] == None):
                 plt.annotate('', xy=(x2,y2), xytext=(x1,y1), arrowprops={'arrowstyle': '-|>'})
-            else:
+            elif args[0] != None:
                 if j in highlighted_edges:
                     plt.annotate('', xy=(x2, y2), xytext=(x1, y1), arrowprops={'arrowstyle': 'fancy'})
                 else:
@@ -155,7 +229,7 @@ def show_graph(vertex_names,adj_list,is_directed,*args):
         if len(edge) == 3:
             plt.text((x1 + x2)/2,(y1 + y2)/2,edge[2],color='red')
 
-    if len(args)!=0:
+    if len(args)!=0 and args[0] != None:
         plt.title('From '+highlighted_edges[0].split(',')[0]+' to '+highlighted_edges[len(highlighted_edges)-1].split(',')[1])
 
     plt.show()
@@ -216,7 +290,7 @@ def FWA(vertex_names,adj_matrix):
     return distances
 
 #shortest paths for one vertex
-def BFA(start_vertex,vertex_names,adj_list):
+def BFA(start_vertex,vertex_names,adj_list,is_directed):
     distances = [float('inf') for a in range(len(vertex_names))]
     prev = [None for b in range(len(vertex_names))]
     distances[vertex_names.index(start_vertex)] = 0
@@ -230,6 +304,10 @@ def BFA(start_vertex,vertex_names,adj_list):
             if distances[vertex_names.index(edge[1])] > distances[vertex_names.index(edge[0])] + edge_len:
                 distances[vertex_names.index(edge[1])] = distances[vertex_names.index(edge[0])] + edge_len
                 prev[vertex_names.index(edge[1])] = edge[0]
+            if not is_directed:
+                if distances[vertex_names.index(edge[0])] > distances[vertex_names.index(edge[1])] + edge_len:
+                    distances[vertex_names.index(edge[0])] = distances[vertex_names.index(edge[1])] + edge_len
+                    prev[vertex_names.index(edge[0])] = edge[1]
 
     #check for negative cycles
     spec_distances = distances.copy()
@@ -249,12 +327,13 @@ def BFA(start_vertex,vertex_names,adj_list):
     return distances,prev
 
 
+#find your way to exit
 def SSP(start_vertex,finish_vertex,vertex_names,adj_list,adj_matrix,is_weighted,is_directed):
     args = explore(start_vertex,vertex_names,adj_matrix)
     if not args[3][vertex_names.index(finish_vertex)]:
         print("Can't reach ",finish_vertex)
         return
-    distances,prev = BFA(start_vertex,vertex_names,adj_list)
+    distances,prev = BFA(start_vertex,vertex_names,adj_list,is_directed)
     da_way_rev = []
     current_vortex = finish_vertex
     while current_vortex!=start_vertex:
@@ -274,7 +353,7 @@ def SSP(start_vertex,finish_vertex,vertex_names,adj_list,adj_matrix,is_weighted,
     return distances[vertex_names.index(finish_vertex)],da_way
 
 
-
+#greedy
 def vertex_cover_edges(vertex_names,adj_list,adj_matrix,is_directed):
     matrix_to_mod = adj_matrix.copy()
     chosen_vertex = []
@@ -308,7 +387,7 @@ def vertex_cover_edges(vertex_names,adj_list,adj_matrix,is_directed):
     return chosen_vertex
 
 
-#max independent vertex set(don't watch this code b-b-baka :})
+#max independent vertex set; greedy one
 def MIVS(vertex_names,adj_matrix):
     matrix_to_mod = adj_matrix.copy()
     chosen_vertex = []
@@ -356,6 +435,89 @@ def MIVS(vertex_names,adj_matrix):
 
     return chosen_vertex
 
+
+
+def Euler_cycle(vertex_names,adj_matrix):
+    #проверка
+    for i in range(len(vertex_names)):
+        edges = list(filter(lambda x: x!= 0 and x!= float('inf'),adj_matrix[i]))
+        if len(edges)%2 != 0:
+            return 'No Euler cycle'
+    matrix_to_mod = adj_matrix.copy()
+    vertex_pool = []
+    path = []
+    vertex = random.choice(vertex_names)
+    vertex_pool += [vertex]
+    while len(vertex_pool) > 0:
+        vertex = vertex_pool[0]
+        if len(list(filter(lambda x: x!= 0 and x!= float('inf'),matrix_to_mod[vertex_names.index(vertex)]))) == 0:
+            path +=[vertex]
+            vertex_pool.remove(vertex)
+        else:
+            for i in range(len(vertex_names)):
+                if matrix_to_mod[vertex_names.index(vertex)][i] != 0 and matrix_to_mod[vertex_names.index(vertex)][i] != float('inf'):
+                    vertex1 = vertex_names[i]
+                    break
+            vertex_pool = [vertex1] + vertex_pool
+            matrix_to_mod[vertex_names.index(vertex)][vertex_names.index(vertex1)] = float('inf')
+            matrix_to_mod[vertex_names.index(vertex1)][vertex_names.index(vertex)] = float('inf')
+
+    path.pop(len(path) - 1)
+    show_graph(vertex_names,matrix_to_list(vertex_names,adj_matrix,weight_check(vertex_names,adj_matrix),False),False,make_chain(path,vertex_names,adj_matrix,True))
+    return path
+
+
+#full search
+def Hamilton_cycle(vertex_names,adj_matrix):
+    if len(vertex_names) > 10:
+        print('Do it on your own risk(hardly calculated for 11 vertexes). Continue?(y/n)')
+        keep_workin = input()
+        if keep_workin == n or keep_workin == no or keep_workin == No:
+            return 'Not calculating'
+    all_ways = list(permutations(vertex_names,len(vertex_names)))
+    for i in all_ways:
+        way_clear = True
+        for j in range(len(i) - 1):
+            if adj_matrix[vertex_names.index(i[j])][vertex_names.index(i[j+1])] == float('inf') or adj_matrix[vertex_names.index(i[j])][vertex_names.index(i[j+1])] == 0:
+                way_clear = False
+        if adj_matrix[vertex_names.index(i[len(i) - 1])][vertex_names.index(i[0])] == float('inf') or adj_matrix[vertex_names.index(i[len(i) - 1])][vertex_names.index(i[0])] == 0:
+            way_clear = False
+        if way_clear:
+            show_graph(vertex_names, matrix_to_list(vertex_names,adj_matrix,weight_check(vertex_names,adj_matrix),False), False, make_chain(i, vertex_names, adj_matrix,True))
+            return list(i)
+    return 'No Hamilton cycle'
+
+
+#greedy one based on another greedy one
+def paint_it(vertex_names,adj_matrix):
+    names = vertex_names.copy()
+    matrix_to_mod = adj_matrix.copy()
+    colors = 0
+    dict = {}
+    while len(names) > 0:
+        colors += 1
+        current_set = MIVS(names,matrix_to_mod)
+        #maybe there is a nice way to delete some columns&rows idk
+        mod_matrix = np.zeros((len(names)-len(current_set),len(names)-len(current_set)))
+        i_m = 0
+        for i in range(len(names)):
+            if not names[i] in current_set:
+                j_m = 0
+                for j in range(len(names)):
+                    if not names[j] in current_set:
+                        mod_matrix[i_m][j_m] = matrix_to_mod[i][j]
+                        j_m += 1
+                i_m += 1
+        dict['color'+str(colors)] = current_set
+        for name in current_set:
+            names.remove(name)
+        matrix_to_mod = mod_matrix
+
+    show_graph(vertex_names,matrix_to_list(vertex_names,adj_matrix,weight_check(vertex_names,adj_matrix),False),False,None,dict)
+
+    return colors,dict
+
+
 vertex_names,adj_list,is_weighted,is_directed = get_graph()
 
 adj_matrix = list_to_matrix(vertex_names,adj_list,is_directed)
@@ -375,7 +537,7 @@ while vertex2 == vertex1:
     vertex2 = random.choice(vertex_names)
 
 print('All distances from '+vertex1+':')
-print(BFA(vertex1,vertex_names,adj_list))
+print(BFA(vertex1,vertex_names,adj_list,is_directed))
 
 print('Da way from '+vertex1+' to '+vertex2+':')
 print(SSP(vertex1,vertex2,vertex_names,adj_list,adj_matrix,is_weighted,is_directed))
@@ -386,15 +548,22 @@ print(vertex_cover_edges(vertex_names,adj_list,adj_matrix,is_directed))
 if not is_directed:
     print('Max independent vertex set:')
     print(MIVS(vertex_names,adj_matrix))
+    print('Euler cycle:')
+    print(Euler_cycle(vertex_names,adj_matrix))
+    print('Hamilton cycle:')
+    print(Hamilton_cycle(vertex_names,adj_matrix))
+    print('Greedy coloring:')
+    print(paint_it(vertex_names,adj_matrix))
 
 show_graph(vertex_names,adj_list,is_directed)
+
+#ver 1.3 (it's working properly now(maybe))
 
 #little input example
 #a b c d e f
 #n
 #a,b,2 a,c,5 b,f,1 f,e,2 c,e,1
 #Or just Random :)
-
-
-
-#some problems could happen
+#For testing I'm often using 'Random 8 3 random False'
+#report bugs
+#Your ad could be here
