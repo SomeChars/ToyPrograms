@@ -472,7 +472,7 @@ def Hamilton_cycle(vertex_names,adj_matrix):
     if len(vertex_names) > 10:
         print('Do it on your own risk(hardly calculated for 11 vertexes). Continue?(y/n)')
         keep_workin = input()
-        if keep_workin == n or keep_workin == no or keep_workin == No:
+        if keep_workin == 'n' or keep_workin == 'no' or keep_workin == 'No':
             return 'Not calculating'
     all_ways = list(permutations(vertex_names,len(vertex_names)))
     for i in all_ways:
