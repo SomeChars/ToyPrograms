@@ -616,7 +616,7 @@ if not is_directed:
 
 show_graph(vertex_names,adj_list,is_directed)
 
-#ver 1.3 (it's working properly now(maybe))
+#ver 1.4 (it's working properly now)
 
 #little input example
 #a b c d e f
