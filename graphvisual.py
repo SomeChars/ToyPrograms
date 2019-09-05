@@ -6,13 +6,51 @@ from itertools import permutations
 
 def get_graph():
     print('Enter vertex names, split them with spaces; type "Random vertex_number edge_density_level(1-4) + args"'
-          ' for a random graph(mpre info in comments below this line)')
+          ' for a random graph(more info in comments below this line)')
     #Random vertex_number edge_density_level(1-4) is_weighted is_directed; set "random" for a random result
     vertex_names = input().split()
     if len(vertex_names) == 0:
         return 'Empty input'
     if vertex_names[0] == 'Random':
-        vertex_names, vertex_number, is_weighted, is_directed, adj_list = make_random_graph(vertex_names)
+        print('Print your settings')
+
+        user_settings = input()
+        if user_settings != '':
+            user_settings = ['this line is useless'] + user_settings.split()
+        else:
+            user_settings = ['this line is useless']
+        vertex_names, vertex_number, is_weighted, is_directed, adj_list = make_random_graph(user_settings)
+    elif vertex_names[0] == 'File':
+        print('Print filename')
+        filename = input()
+        vertex_names, vertex_number, is_weighted, is_directed, adj_list = input_from_file(filename)
+    elif vertex_names[0] == 'Matrix':
+        print('You can print it by rows or just paste it')
+        """
+        Input matrix should be like this:
+        0,2,3
+        2,0,1
+        3,1,0
+        """
+        make_settings = True
+        lines_left = 1
+        while True:
+            if lines_left == 0:
+                break
+            line = [float(i) for i in input().split(',')]
+            if make_settings:
+                lines_left = len(line) - 1
+                adj_matrix = np.array(line)
+                make_settings = False
+            else:
+                adj_matrix = np.vstack((adj_matrix,line))
+                lines_left -= 1
+
+        vertex_number = len(adj_matrix)
+        vertex_names = ['vertex' + str(j + 1) for j in range(vertex_number)]
+        is_directed = not np.array_equal(adj_matrix,adj_matrix.T)
+        is_weighted = weight_check(vertex_names,adj_matrix)
+        adj_list = matrix_to_list(vertex_names,adj_matrix,is_weighted,is_directed)
     else:
         for i in vertex_names:
             if vertex_names.count(i) > 1:
@@ -34,6 +72,7 @@ def get_graph():
         if len(weight_control) == 2:
             is_weighted = False
     return vertex_names,adj_list,is_weighted,is_directed
+
 
 def make_random_graph(args):
     vertex_names = ''
@@ -94,6 +133,27 @@ def make_random_graph(args):
     return vertex_names,vertex_number,is_weighted,is_directed,adj_list
 
 
+def input_from_file(filename):
+    file = open(filename,'r')
+    lines = file.readlines()
+    if len(lines) == 3 and (lines[1].startswith('y') or lines[1].startswith('yes') or lines[1].startswith('n') or lines[1].startswith('no')):
+        is_directed = False
+        vertex_names = lines[0].split()
+        adj_list = lines[2].split()
+        directed = lines[1]
+        if directed == 'y' or directed == 'yes':
+            is_directed = True
+        is_weighted = True
+        weight_control = adj_list[0].split(',')
+        if len(weight_control) == 2:
+            is_weighted = False
+    else:
+        adj_matrix = np.loadtxt(filename,delimiter=',')
+        is_directed = not np.array_equal(adj_matrix,adj_matrix.T)
+        vertex_names = ['vertex'+str(i+1) for i in range(len(adj_matrix))]
+        is_weighted = weight_check(vertex_names,adj_matrix)
+    return vertex_names,len(adj_matrix),is_weighted,is_directed,matrix_to_list(vertex_names,adj_matrix,is_weighted,is_directed)
+
 
 def list_to_matrix(vertex_names,adj_list,is_directed):
     vertex_number = len(vertex_names)
@@ -117,7 +177,6 @@ def list_to_matrix(vertex_names,adj_list,is_directed):
                 if not is_directed:
                     adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = edge[2]
     return adj_matrix
-
 
 
 def matrix_to_list(vertex_names,adj_matrix,is_weighted,is_directed):
@@ -146,7 +205,6 @@ def weight_check(vertex_names,adj_matrix):
             if adj_matrix[i][j]!=float('inf') and adj_matrix[i][j]!=0 and adj_matrix[i][j]!=1:
                 is_weighted = True
     return is_weighted
-
 
 
 def make_chain(vertex_set,vertex_names,adj_matrix,need_to_close):
@@ -288,6 +346,7 @@ def FWA(vertex_names,adj_matrix):
                     distances[vertex_names.index(i)][vertex_names.index(j)] = min(distances[vertex_names.index(i)][vertex_names.index(j)],
                         distances[vertex_names.index(i)][vertex_names.index(k)] + distances[vertex_names.index(k)][vertex_names.index(j)])
     return distances
+
 
 #shortest paths for one vertex
 def BFA(start_vertex,vertex_names,adj_list,is_directed):
@@ -564,6 +623,6 @@ show_graph(vertex_names,adj_list,is_directed)
 #n
 #a,b,2 a,c,5 b,f,1 f,e,2 c,e,1
 #Or just Random :)
-#For testing I'm often using 'Random 8 3 random False'
+#For testing I'm often using 'Random + 8 3 random False'
 #report bugs
 #Your ad could be here
