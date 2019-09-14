@@ -673,10 +673,6 @@ if not graph1.is_directed:
     print('Greedy coloring:')
     print(graph1.paint_it(True))
 
-<<<<<<< HEAD
-=======
-#ver 1.4 (it's working properly now)
->>>>>>> 1cb31fc8e7714c389a001894ed230b450b9170aa
 
 #ver 2.0 (made it in OOP + added some GUI)
 #little input example
