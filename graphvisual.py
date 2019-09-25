@@ -22,7 +22,7 @@ class Graph():
         self.user_settings = user_settings
         self.vertex_names = []
         self.vertex_number = 0
-        self.adj_list = [],
+        self.adj_list = []
         self.adj_matrix = []
         self.is_directed = False
         self.is_weighted = False
