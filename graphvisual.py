@@ -7,7 +7,16 @@ import sys
 
 
 class Graph():
-    def __init__(self,input_type='Console',method_name='String',user_settings='a'):
+    def __init__(self,input_type='Console',method_name='',user_settings=''):
+        #Basically Console == GUI, I've just tested how's GUI works on my PC, but Console useful at making class instances
+        #Available input methods: String Matrix File Random
+        #String input: edge1 edge2 isolated_vertex1 etc...
+        #Matrix input:
+        #0,1,2
+        #1,0,3
+        #2,3,0
+        #File input: filename (info in file should be in String or Matrix format)
+        #Random input: vertex_number edge_density_level(1-4) is_weighted is_directed; set any to "random" for a random result for it
         self.input_type = input_type
         self.method_name = method_name
         self.user_settings = user_settings
@@ -17,22 +26,23 @@ class Graph():
         self.adj_matrix = []
         self.is_directed = False
         self.is_weighted = False
-        # Random vertex_number edge_density_level(1-4) is_weighted is_directed; set "random" for a random result
-        if self.input_type == 'GUI':
+        if self.input_type == 'GUI' and (self.method_name == '' or  self.user_settings == ''):
             app = QtWidgets.QApplication(sys.argv)
             window = uic.loadUi('gv.ui')
-            window.pushButton_2.clicked.connect(window.close)
-            window.pushButton.clicked.connect(lambda:self.get_method_name(window))
-            window.pushButton_3.clicked.connect(lambda:self.get_user_settings(window))
+            window.pushButton_1.clicked.connect(lambda:self.set_method_name_string(window))
+            window.pushButton_2.clicked.connect(lambda:self.set_method_name_matrix(window))
+            window.pushButton_3.clicked.connect(lambda:self.set_method_name_file(window))
+            window.pushButton_4.clicked.connect(lambda:self.set_method_name_random(window))
+            window.pushButton_5.clicked.connect(lambda:self.get_user_settings(window))
             window.show()
             app.exec_()
-        if self.input_type == 'Console':
+        if self.input_type == 'Console' and self.method_name == '':
             print('Type method you want to use')
             self.method_name = str(input())
         if len(self.method_name) == 0:
             return 'Empty input'
         if self.method_name == 'Random':
-            if self.input_type == 'Console':
+            if self.input_type == 'Console' and self.user_settings == '':
                 self.user_settings = input()
             if self.user_settings != '':
                 self.user_settings = ['this line is useless'] + self.user_settings.split()
@@ -41,20 +51,15 @@ class Graph():
             self.make_random_graph(self.user_settings)
             self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
         elif self.method_name == 'File':
-            if self.input_type == 'Console':
+            if self.input_type == 'Console' and self.user_settings == '':
                 self.user_settings = input()
             self.input_from_file(self.user_settings)
             self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
         elif self.method_name == 'Matrix':
-            """
-            Input matrix should be like this:
-            0,2,3
-            2,0,1
-            3,1,0
-            """
             if self.input_type == 'Console':
                 print('You can print it by rows or just paste it')
-                self.user_settings = input()
+                if self.user_settings == '':
+                    self.user_settings = input()
                 make_settings = True
                 lines_left = 1
                 while True:
@@ -86,7 +91,10 @@ class Graph():
             self.adj_list = self.matrix_to_list(self.vertex_names, self.adj_matrix, self.is_weighted, self.is_directed)
         elif self.method_name == 'String':
             if self.input_type == 'Console':
-                self.user_settings = input().split()
+                if self.user_settings == '':
+                    self.user_settings = input().split()
+                else:
+                    self.user_settings = self.user_settings.split()
             else:
                 self.user_settings = self.user_settings.split()
             self.adj_list = []
@@ -95,12 +103,12 @@ class Graph():
                 word_temp = word.split(',')
                 if len(word_temp) == 1:
                     if word_temp not in self.vertex_names:
-                        self.vertex_names += word_temp
+                        self.vertex_names += [word_temp]
                 else:
                     if word_temp[0] not in self.vertex_names:
-                        self.vertex_names += word_temp[0]
+                        self.vertex_names += [word_temp[0]]
                     if word_temp[1] not in self.vertex_names:
-                        self.vertex_names += word_temp[1]
+                        self.vertex_names += [word_temp[1]]
                     self.adj_list += [word]
             self.is_weighted = True
             weight_control = self.adj_list[0].split(',')
@@ -111,11 +119,284 @@ class Graph():
             self.vertex_number = len(self.vertex_names)
 
 
+    def __eq__(self, other):
+        if self.vertex_number != other.vertex_number or len(self.adj_list) != len(other.adj_list):
+            return False
+        self_degrees = {}
+        other_degrees = {}
+        for i in range(len(self.adj_matrix)):
+            degree = len(list(filter(lambda x: x != 0 and x != float('inf'), self.adj_matrix[i])))
+            if degree in self_degrees:
+                self_degrees[degree] += 1
+            else:
+                self_degrees[degree] = 1
+        for j in range(len(other.adj_matrix)):
+            degree =  len(list(filter(lambda x: x != 0 and x != float('inf'), other.adj_matrix[j])))
+            if degree in other_degrees:
+                other_degrees[degree] += 1
+            else:
+                other_degrees[degree] = 1
+        if self_degrees != other_degrees:
+            return False
+        self_edges_degrees = []
+        other_edges_degrees = []
+        for edge in self.adj_list:
+            self_edges_degrees += [[len(list(filter(lambda x: x != 0 and x != float('inf'), self.adj_matrix[self.vertex_names.index(edge.split(',')[0])]))),
+                                   len(list(filter(lambda x: x != 0 and x != float('inf'), self.adj_matrix[self.vertex_names.index(edge.split(',')[1])])))]]
+        for edge in other.adj_list:
+            other_edges_degrees += [[len(list(filter(lambda x: x != 0 and x != float('inf'), other.adj_matrix[other.vertex_names.index(edge.split(',')[0])]))),
+                                   len(list(filter(lambda x: x != 0 and x != float('inf'), other.adj_matrix[other.vertex_names.index(edge.split(',')[1])])))]]
+        for i in self_edges_degrees:
+            if i not in other_edges_degrees and [i[1],i[0]] not in other_edges_degrees:
+                return False
+            if i in other_edges_degrees:
+                other_edges_degrees.pop(other_edges_degrees.index(i))
+            else:
+                other_edges_degrees.pop(other_edges_degrees.index([i[1],i[0]]))
+            self_edges_degrees.pop(self_edges_degrees.index(i))
+        return True
 
-    def get_method_name(self,window):
-        self.method_name = window.lineEdit.text()
+
+    def __lt__(self, other):
+        if self.vertex_number > other.vertex_number or len(self.adj_list) > len(other.adj_list):
+            return False
+        all_subgraphs = list(permutations(other.vertex_names,self.vertex_number))
+        for g in all_subgraphs:
+            flag = True
+            for i in range(self.vertex_number):
+                for j in range(self.vertex_number):
+                    if self.adj_matrix[i][j] != 0 and self.adj_matrix[i][j] != float('inf'):
+                        number = other.adj_matrix[other.vertex_names.index(g[i])][other.vertex_names.index(g[j])]
+                        if number != self.adj_matrix[i][j]:
+                            flag = False
+            if flag:
+                return True,g
+        return False,[]
+
+    def __le__(self,other):
+        if self == other:
+            return True,self.vertex_names
+        else:
+            return self < other
+
+    def __gt__(self,other):
+        return other < self
+
+    def __ge__(self,other):
+        return  other <= self
+
+
+    def is_connected(self):
+        if not self.is_directed:
+            pre,post = self.DFS()
+            return post[pre.index(0)] == len(self.vertex_names)*2 - 1
+        else:
+            flag = True
+            for vertex in self.vertex_names:
+                pre,post = self.DFS(vertex)
+                if pre[pre.index(0)] != post[pre.index(0)] + len(self.vertex_names) - 1:
+                    flag = False
+            return flag
+
+
+    def is_tree(self):
+        return ((len(self.vertex_names)==(len(self.adj_list)+1))and(self.is_connected()))
+
+
+    def vertex_contraction(self,vertex_set):
+        i = 1
+        while(True):
+            cotracted_vertex = 'contracted_vertex'+str(i)
+            if cotracted_vertex not in self.vertex_names:
+                break
+            i+=1
+        for vertex in vertex_set:
+            for i in range(len(self.adj_list)):
+                if  self.adj_list[i].split(',')[0] == vertex:
+                    new_edge = cotracted_vertex+','+self.adj_list[i].split(',')[1]
+                    if self.is_weighted:
+                        new_edge += ','+self.adj_list[i].split(',')[2]
+                    self.adj_list[i] = new_edge
+                if self.adj_list[i].split(',')[1] == vertex:
+                    new_edge = self.adj_list[i].split(',')[0]+','+cotracted_vertex
+                    if self.is_weighted:
+                        new_edge += ','+self.adj_list[i].split(',')[2]
+                    self.adj_list[i] = new_edge
+        for edge in self.adj_list:
+            if edge.split(',')[0] == edge.split(',')[1]:
+                self.adj_list.pop(self.adj_list.index(edge))
+        for vertex in vertex_set:
+            self.vertex_names.pop(self.vertex_names.index(vertex))
+        self.vertex_names += [cotracted_vertex]
+        self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
+        self.vertex_number = len(self.vertex_names)
+
+
+
+    def __add__(self, other):
+        #переименовываю все вершины чтобы избежать коллизии
+        renamed_vertexes = ['vertex'+str(i+1) for i in range(len(self.vertex_names)+len(other.vertex_names))]
+        renamed_self_edges = []
+        renamed_other_edges = []
+        for edge in self.adj_list:
+            if self.is_weighted:
+                renamed_self_edges += [renamed_vertexes[self.vertex_names.index(edge.split(',')[0])]+','+
+                                       renamed_vertexes[self.vertex_names.index(edge.split(',')[1])]+','+str(edge.split(',')[2])]
+            else:
+                renamed_self_edges += [renamed_vertexes[self.vertex_names.index(edge.split(',')[0])] + ',' +
+                                       renamed_vertexes[self.vertex_names.index(edge.split(',')[1])]]
+        for edge in other.adj_list:
+            if other.is_weighted:
+                renamed_other_edges += [renamed_vertexes[other.vertex_names.index(edge.split(',')[0])+
+                    len(self.vertex_names)]+','+renamed_vertexes[other.vertex_names.index(edge.split(',')[1])+
+                    len(self.vertex_names)]+','+str(edge.split(',')[2])]
+            else:
+                renamed_other_edges += [renamed_vertexes[other.vertex_names.index(edge.split(',')[0])+len(self.vertex_names)]+','+
+                                       renamed_vertexes[other.vertex_names.index(edge.split(',')[1])+len(self.vertex_names)]]
+        output = ''
+        for i in renamed_self_edges:
+            if i.split(',')[0] in renamed_vertexes:
+                renamed_vertexes.pop(renamed_vertexes.index(i.split(',')[0]))
+            if i.split(',')[1] in renamed_vertexes:
+                renamed_vertexes.pop(renamed_vertexes.index(i.split(',')[1]))
+            output += str(i)+' '
+        for i in renamed_other_edges:
+            if i.split(',')[0] in renamed_vertexes:
+                renamed_vertexes.pop(renamed_vertexes.index(i.split(',')[0]))
+            if i.split(',')[1] in renamed_vertexes:
+                renamed_vertexes.pop(renamed_vertexes.index(i.split(',')[1]))
+            output += str(i)+' '
+        for i in renamed_vertexes:
+            output += str(i)+' '
+        return Graph('Console','String',output[:len(output)-1])
+
+
+    def add_vertex(self,name):
+        if name in self.vertex_names:
+            i = 1
+            while(True):
+                temp_name = 'vertex'+str(i)
+                if temp_name not in self.vertex_names:
+                    self.vertex_names += [temp_name]
+                    break
+                i += 1
+        self.vertex_number += 1
+        self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
+
+
+    #проверьте кто-нибудь, пожалуйста
+    def add_edge(self,edge):
+        if edge.split(',')[0] not in self.vertex_names or edge.split(',')[1] not in self.vertex_names():
+            print('Do you want to add missing vertex(es)?(y/n)')
+            answer = input()
+            if answer == 'n':
+                return
+            temp_name1 = ''
+            temp_name2 = ''
+            if edge.split(',')[0] not in self.vertex_names:
+                i = 1
+                while (True):
+                    temp_name = 'vertex' + str(i)
+                    if temp_name not in self.vertex_names:
+                        self.vertex_names += [temp_name]
+                        break
+                    i += 1
+                temp_name1 = temp_name
+            if edge.split(',')[1] not in self.vertex_names:
+                i = 1
+                while (True):
+                    temp_name = 'vertex' + str(i)
+                    if temp_name not in self.vertex_names:
+                        self.vertex_names += [temp_name]
+                        break
+                    i += 1
+                temp_name2 = temp_name
+            if temp_name1 != '' and temp_name2 != '':
+                if len(edge.split(',')) > 2 and not self.is_weighted:
+                    print('Do you want to make graph weighted?(y/n)')
+                    answer = input()
+                    if answer == 'n':
+                        return
+                    for i in randge(len(self.adj_list)):
+                        self.adj_list[i] += ',' + str(1)
+                    self.adj_list += [temp_name1+','+temp_name2+','+edge.split(',')[2]]
+                elif len(edge.split(',')) == 2 and self.is_weighted:
+                    self.adj_list += [temp_name1+','+temp_name2+','+str(1)]
+                elif len(edge.split(',')) > 2:
+                    self.adj_list += [temp_name1 + ',' + temp_name2 + ',' + edge.split(',')[2]]
+                else:
+                    self.adj_list += [temp_name1 + ',' + temp_name2]
+            if temp_name1 != '' and temp_name2 == '':
+                if len(edge.split(',')) > 2 and not self.is_weighted:
+                    print('Do you want to make graph weighted?(y/n)')
+                    answer = input()
+                    if answer == 'n':
+                        return
+                    for i in randge(len(self.adj_list)):
+                        self.adj_list[i] += ',' + str(1)
+                    self.adj_list += [temp_name1+','+edge.split(',')[1]+','+edge.split(',')[2]]
+                elif len(edge.split(',')) == 2 and self.is_weighted:
+                    self.adj_list += [temp_name1+','+edge.split(',')[1]+','+str(1)]
+                elif len(edge.split(',')) > 2:
+                    self.adj_list += [temp_name1 + ',' + edge.split(',')[1] + ',' + edge.split(',')[2]]
+                else:
+                    self.adj_list += [temp_name1 + ',' + edge.split(',')[1]]
+            if temp_name1 == '' and temp_name2 != '':
+                if len(edge.split(',')) > 2 and not self.is_weighted:
+                    print('Do you want to make graph weighted?(y/n)')
+                    answer = input()
+                    if answer == 'n':
+                        return
+                    for i in randge(len(self.adj_list)):
+                        self.adj_list[i] += ',' + str(1)
+                    self.adj_list += [edge.split(',')[0]+','+temp_name2+','+edge.split(',')[2]]
+                elif len(edge.split(',')) == 2 and self.is_weighted:
+                    self.adj_list += [edge.split(',')[0]+','+temp_name2+','+str(1)]
+                elif len(edge.split(',')) > 2:
+                    self.adj_list += [edge.split(',')[0] + ',' + temp_name2 + ',' + edge.split(',')[2]]
+                else:
+                    self.adj_list += [edge.split(',')[0] + ',' + temp_name2]
+        else:
+            for e in self.adj_list:
+                if e == edge:
+                    print('This edge is already in graph')
+                elif (e.split(',')[0] == edge.split(',')[0] and e.split(',')[1] == edge.split(',')[1]) or (
+                        e.split(',')[0] == edge.split(',')[1] and e.split(',')[1] == edge.split(',')[0]):
+                    if len(e.split(',')) == len(edge.split(',')):
+                        print('Do you want to update weight?(y/n)')
+                        answer = input()
+                        if answer == 'n':
+                            return
+                        self.adj_list[self.adj_list.index(e)] = edge
+                    elif len(e.split(',')) > len(edge.split(',')):
+                        self.adj_list[self.adj_list.index(e)] = e.split(',')[0] + ',' + e.split(',')[1] + ',' + str(1)
+                    else:
+                        print('Do you want to make graph weighted?(y/n)')
+                        answer = input()
+                        if answer == 'n':
+                            return
+                        for i in randge(len(self.adj_list)):
+                            self.adj_list[i] += ',' + str(1)
+                            if (self.adj_list[i].split(',')[0] == edge.split(',')[0] and self.adj_list[i].split(',')[1] == edge.split(',')[1]) or (
+                                    self.adj_list[i].split(',')[0] == edge.split(',')[1] and self.adj_list[i].split(',')[1] == edge.split(',')[0]):
+                                self.adj_list[i][len(self.adj_list[i])-1] = ''
+                                self.adj_list[i] += edge.split(',')[2]
+
+
+
+
+
+    def set_method_name_string(self,window):
+        self.method_name = 'String'
+    def set_method_name_matrix(self,window):
+        self.method_name = 'Matrix'
+    def set_method_name_file(self,window):
+        self.method_name = 'File'
+    def set_method_name_random(self,window):
+        self.method_name = 'Random'
     def get_user_settings(self,window):
         self.user_settings = window.textEdit.toPlainText()
+        window.close()
 
 
     def make_random_graph(self,args):
@@ -349,13 +630,16 @@ class Graph():
         plt.show()
 
     # poisk v glubinu
-    def DFS(self):
+    def DFS(self,root=''):
         counter = 0
         visited = [False for a in range(len(self.vertex_names))]
         previsit = [0 for b in range(len(self.vertex_names))]
         postvisit = [0 for c in range(len(self.vertex_names))]
         vertex_names = self.vertex_names
         adj_matrix = self.adj_matrix
+        if root != '':
+            start_vertex, vertex_names, adj_matrix, visited, previsit, postvisit, counter = \
+                self.explore(j, vertex_names, adj_matrix, visited, previsit, postvisit, counter)
         for j in vertex_names:
             if not visited[vertex_names.index(j)]:
                 start_vertex, vertex_names, adj_matrix, visited, previsit, postvisit, counter = \
@@ -633,48 +917,9 @@ class Graph():
             self.show_graph(None, dict)
 
         return colors, dict
+    
 
-
-graph1 = Graph('GUI')
-
-print(graph1.adj_matrix)
-graph1.show_graph()
-
-
-previsit,postvisit = graph1.DFS()
-print('DFS output')
-for k in range(graph1.vertex_number):
-    print(graph1.vertex_names[k], previsit[k], postvisit[k])
-
-print('All distances:')
-print(graph1.FWA())
-
-vertex1 = random.choice(graph1.vertex_names)
-vertex2 = random.choice(graph1.vertex_names)
-while vertex2 == vertex1:
-    vertex2 = random.choice(graph1.vertex_names)
-
-print('All distances from '+vertex1+':')
-print(graph1.BFA(vertex1))
-
-print('Da way from '+vertex1+' to '+vertex2+':')
-print(graph1.SSP(vertex1,vertex2))
-
-print('Vertex cover edges:')
-print(graph1.vertex_cover_edges())
-
-if not graph1.is_directed:
-    print('Max independent vertex set:')
-    print(graph1.MIVS(graph1.vertex_names,graph1.adj_matrix))
-    print('Euler cycle:')
-    print(graph1.euler_cycle(True))
-    print('Hamilton cycle:')
-    print(graph1.hamilton_cycle(True))
-    print('Greedy coloring:')
-    print(graph1.paint_it(True))
-
-
-#ver 2.0 (made it in OOP + added some GUI)
+#ver 2.1 (OOP + GUI + some utility features)
 #little input example
 #a,b,2 a,c,5 b,f,1 f,e,2 c,e,1 d
 #Or just Random
