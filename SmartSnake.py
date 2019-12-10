@@ -110,7 +110,7 @@ class Game():
     def game_start(self):
         X = []
         Y = []
-        while not self.game_map.dead() and self.game_map.give_score()[0]<(self.game_map.give_size()[0]-2)*(self.game_map.give_size()[1]--2)-1:
+        while not self.game_map.dead() and self.game_map.give_score()[0]<(self.game_map.give_size()[0]-2)*(self.game_map.give_size()[1]-2)-1:
             if self.gamemode != 'demonstrate':
                 start = time.time()
                 while True:
