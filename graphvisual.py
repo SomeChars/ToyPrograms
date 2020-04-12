@@ -40,7 +40,7 @@ class Graph():
             print('Type method you want to use')
             self.method_name = str(input())
         if len(self.method_name) == 0:
-            return 'Empty input'
+            print('Empty Input')
         if self.method_name == 'Random':
             if self.input_type == 'Console' and self.user_settings == '':
                 self.user_settings = input()
@@ -110,15 +110,16 @@ class Graph():
                     if word_temp[1] not in self.vertex_names:
                         self.vertex_names += [word_temp[1]]
                     self.adj_list += [word]
+            self.vertex_names.sort()
             self.is_weighted = True
             weight_control = self.adj_list[0].split(',')
             if len(weight_control) == 2:
                 self.is_weighted = False
-            self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
+            self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,True)
             self.is_directed = not np.array_equal(self.adj_matrix, self.adj_matrix.T)
             self.vertex_number = len(self.vertex_names)
 
-
+    #it's wrong actually, just like < and > because it's actually NP, but it might work sometimes
     def __eq__(self, other):
         if self.vertex_number != other.vertex_number or len(self.adj_list) != len(other.adj_list):
             return False
@@ -286,7 +287,7 @@ class Graph():
 
     #проверьте кто-нибудь, пожалуйста
     def add_edge(self,edge):
-        if edge.split(',')[0] not in self.vertex_names or edge.split(',')[1] not in self.vertex_names():
+        if edge.split(',')[0] not in self.vertex_names or edge.split(',')[1] not in self.vertex_names:
             print('Do you want to add missing vertex(es)?(y/n)')
             answer = input()
             if answer == 'n':
@@ -317,7 +318,7 @@ class Graph():
                     answer = input()
                     if answer == 'n':
                         return
-                    for i in randge(len(self.adj_list)):
+                    for i in range(len(self.adj_list)):
                         self.adj_list[i] += ',' + str(1)
                     self.adj_list += [temp_name1+','+temp_name2+','+edge.split(',')[2]]
                 elif len(edge.split(',')) == 2 and self.is_weighted:
@@ -332,7 +333,7 @@ class Graph():
                     answer = input()
                     if answer == 'n':
                         return
-                    for i in randge(len(self.adj_list)):
+                    for i in range(len(self.adj_list)):
                         self.adj_list[i] += ',' + str(1)
                     self.adj_list += [temp_name1+','+edge.split(',')[1]+','+edge.split(',')[2]]
                 elif len(edge.split(',')) == 2 and self.is_weighted:
@@ -347,7 +348,7 @@ class Graph():
                     answer = input()
                     if answer == 'n':
                         return
-                    for i in randge(len(self.adj_list)):
+                    for i in range(len(self.adj_list)):
                         self.adj_list[i] += ',' + str(1)
                     self.adj_list += [edge.split(',')[0]+','+temp_name2+','+edge.split(',')[2]]
                 elif len(edge.split(',')) == 2 and self.is_weighted:
@@ -375,14 +376,12 @@ class Graph():
                         answer = input()
                         if answer == 'n':
                             return
-                        for i in randge(len(self.adj_list)):
+                        for i in range(len(self.adj_list)):
                             self.adj_list[i] += ',' + str(1)
                             if (self.adj_list[i].split(',')[0] == edge.split(',')[0] and self.adj_list[i].split(',')[1] == edge.split(',')[1]) or (
                                     self.adj_list[i].split(',')[0] == edge.split(',')[1] and self.adj_list[i].split(',')[1] == edge.split(',')[0]):
                                 self.adj_list[i][len(self.adj_list[i])-1] = ''
                                 self.adj_list[i] += edge.split(',')[2]
-
-
 
 
 
@@ -414,7 +413,6 @@ class Graph():
             is_weighted = False if args[3] == 'False' else True
         if len(args) > 4 and args[4] != 'random':
             is_directed = False if args[4] == 'False' else True
-
         if len(args) > 2:
             if args[2] == 'random':
                 edge_density = random.randint(1, 4)
@@ -491,6 +489,7 @@ class Graph():
             vertex_names, len(adj_matrix), is_weighted, is_directed, self.matrix_to_list(vertex_names, adj_matrix,
                                                                                        is_weighted, is_directed)
 
+
     def list_to_matrix(self,vertex_names,adj_list,is_directed):
         vertex_number = len(vertex_names)
         adj_matrix = np.zeros((vertex_number, vertex_number))
@@ -514,6 +513,7 @@ class Graph():
                         adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = edge[2]
         return adj_matrix
 
+
     def matrix_to_list(self,vertex_names, adj_matrix, is_weighted, is_directed):
         temp_adj_list = []
         for i in range(len(vertex_names)):
@@ -535,6 +535,7 @@ class Graph():
                                 temp_adj_list += [edge]
         return temp_adj_list
 
+
     def weight_check(self,vertex_names, adj_matrix):
         is_weighted = False
         for i in range(len(vertex_names)):
@@ -542,6 +543,7 @@ class Graph():
                 if adj_matrix[i][j] != float('inf') and adj_matrix[i][j] != 0 and adj_matrix[i][j] != 1:
                     is_weighted = True
         return is_weighted
+
 
     def make_chain(self,vertex_set,need_to_close):
         chain = []
@@ -559,6 +561,7 @@ class Graph():
                           str(int(self.adj_matrix[self.vertex_names.index(vertex_set[len(vertex_set) - 1])][
                                       self.vertex_names.index(vertex_set[0])]))]
         return chain
+
 
     def show_graph(self, *args):
         # 0 pos in args - edges wanted to be highlighted; input like this: ['a,b,2','b,c,5'] - if graph weighted input weights
@@ -629,8 +632,10 @@ class Graph():
 
         plt.show()
 
-    # poisk v glubinu
+
+    # depth search
     def DFS(self,root=''):
+        j = 0
         counter = 0
         visited = [False for a in range(len(self.vertex_names))]
         previsit = [0 for b in range(len(self.vertex_names))]
@@ -647,6 +652,7 @@ class Graph():
                 counter += 1
 
         return previsit, postvisit
+
 
     def explore(self,start_vertex, vertex_names, adj_matrix, *args):
         if len(args) == 0:
@@ -675,6 +681,7 @@ class Graph():
 
         return safe_start_vertex, vertex_names, adj_matrix, visited, previsit, postvisit, counter
 
+
     # all shortest paths
     def FWA(self):
         distances = self.adj_matrix.copy()
@@ -687,6 +694,7 @@ class Graph():
                             distances[self.vertex_names.index(i)][self.vertex_names.index(k)] + distances[self.vertex_names.index(k)][
                                 self.vertex_names.index(j)])
         return distances
+
 
     # shortest paths for one vertex
     def BFA(self,start_vertex):
@@ -724,6 +732,7 @@ class Graph():
 
         return distances, prev
 
+
     # find your way to exit
     def SSP(self,start_vertex, finish_vertex):
         args = self.explore(start_vertex, self.vertex_names, self.adj_matrix)
@@ -749,6 +758,7 @@ class Graph():
         self.show_graph(edges_to_highlight)
 
         return distances[self.vertex_names.index(finish_vertex)], da_way
+
 
     # greedy
     def vertex_cover_edges(self):
@@ -783,6 +793,7 @@ class Graph():
                 vertex_degrees[i] = good_edges
 
         return chosen_vertex
+
 
     # max independent vertex set; greedy one
     def MIVS(self,vertex_names,adj_matrix):
@@ -833,37 +844,53 @@ class Graph():
 
         return chosen_vertex
 
-    def euler_cycle(self,show=False):
-        # проверка
-        for i in range(self.vertex_number):
-            edges = list(filter(lambda x: x != 0 and x != float('inf'), self.adj_matrix[i]))
-            if len(edges) % 2 != 0:
-                return 'No Euler cycle'
-        matrix_to_mod = self.adj_matrix.copy()
-        vertex_pool = []
-        path = []
-        vertex = random.choice(self.vertex_names)
-        vertex_pool += [vertex]
-        while len(vertex_pool) > 0:
-            vertex = vertex_pool[0]
-            if len(list(
-                    filter(lambda x: x != 0 and x != float('inf'), matrix_to_mod[self.vertex_names.index(vertex)]))) == 0:
-                path += [vertex]
-                vertex_pool.remove(vertex)
-            else:
-                for i in range(self.vertex_number):
-                    if matrix_to_mod[self.vertex_names.index(vertex)][i] != 0 and matrix_to_mod[self.vertex_names.index(vertex)][
-                        i] != float('inf'):
-                        vertex1 = self.vertex_names[i]
-                        break
-                vertex_pool = [vertex1] + vertex_pool
-                matrix_to_mod[self.vertex_names.index(vertex)][self.vertex_names.index(vertex1)] = float('inf')
-                matrix_to_mod[self.vertex_names.index(vertex1)][self.vertex_names.index(vertex)] = float('inf')
 
-        path.pop(len(path) - 1)
+    def euler_cycle(self,show=False):
+        # check
+        unexp = []
+        for v in range(len(self.vertex_names)):
+            count = 0
+            for i in range(self.vertex_number):
+                if self.adj_matrix[v][i] != 0 and self.adj_matrix[v][i] != float('inf'): count += 1
+                if self.adj_matrix[i][v] != 0 and self.adj_matrix[i][v] != float('inf'): count -= 1
+            if count != 0:
+                unexp += [[self.vertex_names[v],count]]
+        if len(unexp) != 2: return [],[]
+        saving_edge = ''
+        if len(unexp) == 2:
+            if unexp[0][1] == 1 and unexp[1][1] == -1:
+                saving_edge = unexp[1][0] + ',' + unexp[0][0]
+            elif unexp[0][1] == -1 and unexp[1][1] == 1:
+                saving_edge = unexp[0][0] + ',' + unexp[1][0]
+            else: return [],[]
+        adj_list_to_mod = self.adj_list.copy()
+        if saving_edge != '': adj_list_to_mod += [saving_edge]
+        current_path = [self.vertex_names[0]]
+        while len(adj_list_to_mod) > 0:
+            success = False
+            for e in adj_list_to_mod:
+                if e.split(',')[0] == current_path[len(current_path) - 1]:
+                    success = True
+                    current_path += [e.split(',')[1]]
+                    adj_list_to_mod.remove(e)
+                    break
+                if not self.is_directed:
+                    if e.split(',')[1] == current_path[len(current_path) - 1]:
+                        success = True
+                        current_path += [e.split(',')[0]]
+                        adj_list_to_mod.remove(e)
+                        break
+            if not success:
+                if len(adj_list_to_mod) > 0:
+                    if current_path[0] == current_path[len(current_path) - 1]:
+                        current_path = current_path[1:] + [current_path[1]]
+
+        c_index = current_path.index(saving_edge.split(',')[1])
+        current_path = current_path[c_index:] + current_path[1:c_index+1]
         if show:
-            self.show_graph(self.make_chain(path,True))
-        return path
+            self.show_graph(self.make_chain(current_path,False))
+        return current_path,self.make_chain(current_path,False)
+
 
     # full search
     def hamilton_cycle(self,show=False):
@@ -887,6 +914,7 @@ class Graph():
                     self.show_graph(self.make_chain(i, True))
                 return list(i)
         return 'No Hamilton cycle'
+
 
     # greedy one based on another greedy one
     def paint_it(self,show=False):
@@ -917,12 +945,9 @@ class Graph():
             self.show_graph(None, dict)
 
         return colors, dict
-    
+
 
 #ver 2.1 (OOP + GUI + some utility features)
-#little input example
-#a,b,2 a,c,5 b,f,1 f,e,2 c,e,1 d
-#Or just Random
-#For testing I'm often using 'Random + 8 3 random False'
+#For testing I'm often using 'Console,Random,8,3,random,False'
 #report bugs
 #Your ad could be here
