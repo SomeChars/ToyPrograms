@@ -30,7 +30,7 @@ public class Station_Manager {
            return;
         }
         station.noAtow();
-        this.trainsArrived.add(station.getArrived_train());
+        this.trainsArrived.add(new Train(station.getArrived_train()));
         for(int i = station.getArrived_train().getLength();i>0;i--){
             Wagon wagon_taken = this.station.getLastWagonFromArrivedTrain(true);
             if (wagon_taken.getNet_weight_kg() > 0) fullWagons++;

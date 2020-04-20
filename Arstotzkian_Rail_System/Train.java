@@ -8,12 +8,12 @@ public class Train {
     private ArrayList<Wagon> carried_wagons = new ArrayList<>();
     private int carried_weight;
 
-    //Do I even need this?
-    public Train(String number,int length,ArrayList<Wagon> carried_wagons,int carried_weight){
-        this.number = number;
-        this.length = length;
-        this.carried_wagons = carried_wagons;
-        this.carried_weight = carried_weight;
+
+    public Train(Train train){
+        this.number = train.number;
+        this.length = train.length;
+        this.carried_wagons = (ArrayList<Wagon>) train.carried_wagons.clone();
+        this.carried_weight = train.carried_weight;
     }
 
     public Train(String number){
