@@ -886,11 +886,13 @@ class Graph():
         for i in range(self.vertex_number):
             if self.is_directed:
                 if self.vertex_divergence[i] != 0: unexp += [[self.vertex_names[i],self.vertex_divergence[i]]]
+            else:
+                if self.vertex_degrees[i][0]%2 != 0: unexp += [[self.vertex_names[i],0]]
         if len(unexp) != 2 and len(unexp) != 0:
             print('No euler path/cycle')
             return [],[]
         saving_edge = ''
-        if len(unexp) == 2:
+        if len(unexp) == 2 and self.is_directed:
             if unexp[0][1] == 1 and unexp[1][1] == -1:
                 saving_edge = unexp[1][0] + ',' + unexp[0][0]
             elif unexp[0][1] == -1 and unexp[1][1] == 1:
