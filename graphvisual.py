@@ -7,7 +7,7 @@ import sys
 
 
 class Graph():
-    def __init__(self,input_type='Console',method_name='',user_settings=''):
+    def __init__(self,input_type='Console',method_name='',user_settings='',is_directed = True):
         #Basically Console == GUI, I've just tested how's GUI works on my PC, but Console useful at making class instances
         #Available input methods: String Matrix File Random
         #String input: edge1 edge2 isolated_vertex1 etc...
@@ -24,7 +24,7 @@ class Graph():
         self.vertex_number = 0
         self.adj_list = []
         self.adj_matrix = []
-        self.is_directed = False
+        self.is_directed = is_directed
         self.is_weighted = False
         if self.input_type == 'GUI' and (self.method_name == '' or  self.user_settings == ''):
             app = QtWidgets.QApplication(sys.argv)
@@ -110,14 +110,13 @@ class Graph():
                     if word_temp[1] not in self.vertex_names:
                         self.vertex_names += [word_temp[1]]
                     self.adj_list += [word]
+            self.vertex_number = len(self.vertex_names)
             self.vertex_names.sort()
             self.is_weighted = True
-            weight_control = self.adj_list[0].split(',')
-            if len(weight_control) == 2:
+            if max([len(e.split(',')) for e in self.adj_list]) == 2:
                 self.is_weighted = False
-            self.adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,True)
-            self.is_directed = not np.array_equal(self.adj_matrix, self.adj_matrix.T)
-            self.vertex_number = len(self.vertex_names)
+            self.adj_matrix,self.correct_adj_matrix = self.list_to_matrix(self.vertex_names,self.adj_list,self.is_directed)
+            self.vertex_degrees,self.vertex_divergence = self.vertex_degrees_and_divergence()
 
     #it's wrong actually, just like < and > because it's actually NP, but it might work sometimes
     def __eq__(self, other):
@@ -490,9 +489,26 @@ class Graph():
                                                                                        is_weighted, is_directed)
 
 
+    def vertex_degrees_and_divergence(self):
+        # 1st pos in degrees is out, 2nd is in
+        degrees = [[0,0] for i in range(self.vertex_number)]
+        divergence = [0 for i in range(self.vertex_number)]
+        for i in range(self.vertex_number):
+            for j in range(self.vertex_number):
+                if self.correct_adj_matrix[i][j] != [0] and self.correct_adj_matrix[i][j] != [float('inf')]:
+                    degrees[i][0] += len(self.correct_adj_matrix[i][j])
+                    divergence[i] += len(self.correct_adj_matrix[i][j])
+                if self.correct_adj_matrix[j][i] != [0] and self.correct_adj_matrix[j][i] != [float('inf')]:
+                    degrees[i][1] += len(self.correct_adj_matrix[j][i])
+                    divergence[i] -= len(self.correct_adj_matrix[j][i])
+
+        return degrees,divergence
+
+
     def list_to_matrix(self,vertex_names,adj_list,is_directed):
         vertex_number = len(vertex_names)
         adj_matrix = np.zeros((vertex_number, vertex_number))
+        correct_adj_matrix = [[[] for i in range(vertex_number)] for j in range(vertex_number)]
         for i in range(vertex_number):
             for j in range(vertex_number):
                 if i != j:
@@ -502,16 +518,28 @@ class Graph():
 
         for i in adj_list:
             edge = i.split(',')
-            if edge[0] in vertex_names and edge[1] in vertex_names:
-                if len(edge) == 2:
-                    adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] = 1
-                    if not is_directed:
-                        adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = 1
-                else:
-                    adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] = edge[2]
-                    if not is_directed:
-                        adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = edge[2]
-        return adj_matrix
+            if len(edge) == 2:
+                adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] = 1
+                correct_adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] += [1]
+                if not is_directed:
+                    adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = 1
+                    correct_adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] += [1]
+            else:
+                adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] = edge[2]
+                correct_adj_matrix[vertex_names.index(edge[0])][vertex_names.index(edge[1])] += [edge[2]]
+                if not is_directed:
+                    adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] = edge[2]
+                    correct_adj_matrix[vertex_names.index(edge[1])][vertex_names.index(edge[0])] += [edge[2]]
+
+        for i in range(vertex_number):
+            for j in range(vertex_number):
+                if len(correct_adj_matrix[i][j]) == 0:
+                    if i == j:
+                        correct_adj_matrix[i][j] = [0]
+                    else:
+                        correct_adj_matrix[i][j] = [float('inf')]
+
+        return adj_matrix,correct_adj_matrix
 
 
     def matrix_to_list(self,vertex_names, adj_matrix, is_weighted, is_directed):
@@ -640,8 +668,8 @@ class Graph():
         visited = [False for a in range(len(self.vertex_names))]
         previsit = [0 for b in range(len(self.vertex_names))]
         postvisit = [0 for c in range(len(self.vertex_names))]
-        vertex_names = self.vertex_names
-        adj_matrix = self.adj_matrix
+        vertex_names = self.vertex_names.copy()
+        adj_matrix = self.adj_matrix.copy()
         if root != '':
             start_vertex, vertex_names, adj_matrix, visited, previsit, postvisit, counter = \
                 self.explore(j, vertex_names, adj_matrix, visited, previsit, postvisit, counter)
@@ -845,17 +873,22 @@ class Graph():
         return chosen_vertex
 
 
-    def euler_cycle(self,show=False):
+    def euler_cycle_or_path(self,show=False):
         # check
         unexp = []
-        for v in range(len(self.vertex_names)):
-            count = 0
-            for i in range(self.vertex_number):
-                if self.adj_matrix[v][i] != 0 and self.adj_matrix[v][i] != float('inf'): count += 1
-                if self.adj_matrix[i][v] != 0 and self.adj_matrix[i][v] != float('inf'): count -= 1
-            if count != 0:
-                unexp += [[self.vertex_names[v],count]]
-        if len(unexp) != 2: return [],[]
+        # for v in range(len(self.vertex_names)):
+        #     count = 0
+        #     for i in range(self.vertex_number):
+        #         if self.adj_matrix[v][i] != 0 and self.adj_matrix[v][i] != float('inf'): count += len(self.correct_adj_matrix[v][i])
+        #         if self.adj_matrix[i][v] != 0 and self.adj_matrix[i][v] != float('inf'): count -= len(self.correct_adj_matrix[i][v])
+        #     if count != 0:
+        #         unexp += [[self.vertex_names[v],count]]
+        for i in range(self.vertex_number):
+            if self.is_directed:
+                if self.vertex_divergence[i] != 0: unexp += [[self.vertex_names[i],self.vertex_divergence[i]]]
+        if len(unexp) != 2 and len(unexp) != 0:
+            print('No euler path/cycle')
+            return [],[]
         saving_edge = ''
         if len(unexp) == 2:
             if unexp[0][1] == 1 and unexp[1][1] == -1:
@@ -885,8 +918,13 @@ class Graph():
                     if current_path[0] == current_path[len(current_path) - 1]:
                         current_path = current_path[1:] + [current_path[1]]
 
-        c_index = current_path.index(saving_edge.split(',')[1])
-        current_path = current_path[c_index:] + current_path[1:c_index+1]
+        if saving_edge != '':
+            for i in range(len(current_path)-1):
+                if current_path[i] == saving_edge.split(',')[0] and current_path[i+1] == saving_edge.split(',')[1]:
+                    if current_path[0] == current_path[len(current_path)-1]:
+                        current_path = current_path[:len(current_path)-1]
+                    current_path = current_path[i+1:] + current_path[:i+1]
+                    break
         if show:
             self.show_graph(self.make_chain(current_path,False))
         return current_path,self.make_chain(current_path,False)
